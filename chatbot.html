@@ -1,0 +1,80 @@
+<!-- Script untuk 3D Model Viewer -->
+<script async="async" type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+<!-- CSS Lengkap dengan Semua Fitur -->
+<!-- ======================= HTML Struktur ======================== -->
+<!-- ======================= GANTI SELURUH BLOK INI ======================== -->
+<div id="kaitou-chatbot-container">
+  <button id="kaitou-chat-button">💬</button>
+  
+  <div id="kaitou-chat-window">
+    <div id="kaitou-chat-header">
+      <span>Kaitou-kun</span>
+      <div id="kaitou-header-controls">
+        <span id="kaitou-coin-balance" title="Buka User Hub">🪙 <span id="coin-amount">0</span></span>
+        <span id="mission-toggle-btn" class="header-btn" title="Misi Harian">🏆</span>
+        <span id="animation-toggle-btn" class="header-btn" title="Animasi">✨</span> 
+        <span id="fullscreen-btn" class="header-btn" title="Layar Penuh">⛶</span>
+        <span id="close-btn" class="header-btn" title="Tutup">×</span>
+      </div>
+    </div>
+    
+    <div id="kaitou-rank-display">Peringkat: <span id="rank-value">--</span> 🏆</div>
+    
+    <div id="kaitou-battle-overlay">
+        <div id="battle-box">
+            <div id="battle-arena"><div id="player-side"><model-viewer id="kaitou-battle-viewer" src="https://files.catbox.moe/qe6apf.glb" alt="Model 3D Kaitou-kun untuk Pertarungan" autoplay animation-name="Idle" camera-orbit="0deg 88deg 1.0m" camera-target="0m 0.5m 0m"></model-viewer><div class="battle-name">Kaitou-kun</div><div id="player-hp-bar-container" class="hp-bar-container"><div id="player-hp-bar" class="hp-bar"></div></div><div id="player-hp-text" class="hp-text">100/100</div></div><div id="enemy-side"><img id="battle-monster-img" src="https://files.catbox.moe/chd81s.jpg" alt="Monster" /><div class="battle-name">Monster</div><div id="enemy-hp-bar-container" class="hp-bar-container"><div id="enemy-hp-bar" class="hp-bar"></div></div><div id="enemy-hp-text" class="hp-text">50/50</div></div></div>
+            <div id="battle-log-area"></div>
+            <div id="battle-ui-bottom"><div id="special-meter-container"><div id="special-meter-bar"></div><div id="special-meter-text">SPECIAL</div></div><div id="battle-action-buttons"><button class="action-btn" data-action="punch">Pukul</button><button class="action-btn" data-action="kick">Tendang</button><button class="action-btn" data-action="dodge">Menghindar</button><button class="action-btn" id="special-move-btn" data-action="special" disabled>HISSATSU</button></div></div>
+            <div id="battle-result-overlay"><div id="battle-result-text"></div></div>
+        </div>
+    </div>
+    <div id="kaitou-mission-map-container"></div>
+    <div id="kaitou-mission-panel"><div id="mission-panel-header"><div id="mission-header-left"><span id="mission-panel-title">Misi Hari Ini</span><span id="mission-reset-countdown">Reset dalam: --:--:--</span></div><span id="streak-counter">🔥 Day Streak: 0</span></div><ul id="mission-list"></ul></div>
+    <div id="kaitou-animation-controls"><button data-animation="DKick">Tend. Ganda</button><button data-animation="FKick">Tend. Terbang</button><button data-animation="PunchC">Pukulan</button><button data-animation="SFKick">Tend. Super</button><button data-animation="Run">Lari</button><button data-animation="Jump1">Lompat 1</button><button data-animation="Jump2">Lompat 2</button><button data-animation="Twirl">Berputar</button><button data-animation="Talk">Bicara</button><button data-animation="Idle">Diam</button></div>
+    <div id="kaitou-chat-body-container">
+      <model-viewer id="kaitou-3d-viewer" src="https://files.catbox.moe/qe6apf.glb" alt="Model 3D Kaitou-kun" autoplay animation-name="Idle" camera-controls shadow-intensity="1.5" exposure="1.2" camera-orbit="0deg 88deg 1.0m" camera-target="0m 0.5m 0m" loading="lazy"></model-viewer>
+      <div id="kaitou-chat-messages"><div id="kaitou-chat-scroll-area"></div></div>
+    </div>
+    <div id="kaitou-chat-input-area">
+      <div id="kaitou-media-indicator"><span id="kaitou-media-indicator-text"></span><button id="kaitou-remove-media-btn" title="Batal Pilih Media">×</button></div>
+      <div id="kaitou-input-wrapper"><input type="file" id="kaitou-image-input" accept="image/*" style="display: none;" /><input type="file" id="kaitou-video-input" accept="video/mp4,video/webm,video/quicktime" style="display: none;" /><button id="kaitou-upload-btn" title="Unggah Gambar">📷</button><button id="kaitou-video-upload-btn" title="Unggah Video">📹</button><input type="text" id="kaitou-chat-input" placeholder="Ketik pesanmu..." /><button id="kaitou-send-btn">➤</button></div>
+    </div>
+
+    <!-- SEMUA POPUP SEKARANG DI DALAM CHAT WINDOW -->
+    <div id="kaitou-hub-popup">
+        <div id="kaitou-hub-box">
+            <div class="hub-header"><h3>User Hub</h3><span id="close-hub-btn" class="close-hub-btn">×</span></div>
+            <div class="hub-tabs"><button class="hub-tab-btn active" data-tab="shop">Toko Koin</button><button class="hub-tab-btn" data-tab="history">Riwayat Kode</button></div>
+            <div class="hub-content-wrapper">
+                <div id="hub-content-shop" class="hub-content active"><ul id="kaitou-shop-list"></ul></div>
+                <div id="hub-content-history" class="hub-content"><ul id="history-list"></ul></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="kaitou-username-popup">
+      <div id="kaitou-username-box">
+          <h3>Buat Namamu!</h3><p>Nama ini akan muncul di Papan Skor. Pilih dengan bijak!</p><input type="text" id="kaitou-username-input" placeholder="Maks. 15 karakter" maxlength="15" /><button id="kaitou-save-username-btn">Simpan & Mulai!</button>
+      </div>
+    </div>
+
+    <div id="kaitou-leaderboard-popup">
+      <div class="leaderboard-box">
+          <div class="leaderboard-header"><h3>Papan Skor Teratas</h3><span id="close-leaderboard-btn" class="close-leaderboard-btn">×</span></div>
+          <div class="leaderboard-type-selector"><button class="leaderboard-type-btn active" data-leaderboard-type="coins">Koin Terbanyak</button><button class="leaderboard-type-btn" data-leaderboard-type="fights">Kemenangan</button></div>
+          <div id="leaderboard-list-container" class="leaderboard-list-container"></div>
+      </div>
+    </div>
+    
+  </div> <!-- Penutup dari #kaitou-chat-window -->
+
+</div> 
+<!-- ======================= AKHIR DARI BLOK PENGGANTI ======================== -->
+ 
+
+<div id="kaitou-toast-notification"><div id="kaitou-toast-text">Mau Link Download Tanpa Iklan?<strong> Mainkan Kaitou-kun!</strong> 👉</div><button id="kaitou-toast-close">×</button></div>
+<audio id="kaitou-open-sound" src="https://files.catbox.moe/zhjaeh.mp3" preload="auto"></audio>
+<audio id="sfx-mission-complete" src="https://files.catbox.moe/rh2bcy.mp3" preload="auto"></audio>
+<audio id="sfx-attack-swing" src="https://files.catbox.moe/pfszlh.mp3" preload="auto"></audio>
+<audio id="sfx-monster-hit" src="https://files.catbox.moe/e2kyaj.mp3" preload="auto"></audio>
