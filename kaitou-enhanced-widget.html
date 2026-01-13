@@ -1,0 +1,749 @@
+<!-- Enhanced Kaitou-kun Widget with Console-Quality 3D Fighting System -->
+<!-- Script untuk 3D Model Viewer -->
+<script async="async" type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+<!-- Enhanced CSS dengan Console Graphics Style -->
+<style>
+/* CSS Inti Chatbot - Enhanced */
+#kaitou-chat-button,#kaitou-chat-window,#kaitou-chat-header,#kaitou-chat-input-area,#kaitou-toast-notification{font-family:'Orbitron',monospace}
+
+#kaitou-chat-button{position:fixed;bottom:65px;right:25px;background:linear-gradient(45deg, #ff4f4f, #ff7b7b);color:#fff;width:70px;height:70px;border-radius:50%;border:3px solid #ffaa00;box-shadow:0 4px 20px rgba(0,0,0,.4),0 0 30px rgba(255,79,79,.8);font-size:32px;display:flex;justify-content:center;align-items:center;cursor:pointer;z-index:9998;transition:all .3s ease;animation:pulse-enhanced 2s infinite}
+
+@keyframes pulse-enhanced{0%{box-shadow:0 4px 20px rgba(0,0,0,.4),0 0 30px rgba(255,79,79,.8);transform:scale(1)}50%{box-shadow:0 6px 30px rgba(0,0,0,.6),0 0 50px rgba(255,120,120,1);transform:scale(1.05)}100%{box-shadow:0 4px 20px rgba(0,0,0,.4),0 0 30px rgba(255,79,79,.8);transform:scale(1)}}
+
+#kaitou-chat-button:hover{transform:scale(1.2) rotate(15deg);box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 60px rgba(255,150,150,1)}
+
+#kaitou-chat-window{position:fixed;bottom:100px;right:25px;width:400px;max-width:95%;height:600px;background:linear-gradient(135deg, #1a1a2e, #16213e);border-radius:20px;border:2px solid #ffaa00;box-shadow:0 10px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.1);display:flex;flex-direction:column;overflow:hidden;z-index:9999;transform-origin:bottom right;transform:scale(0);opacity:0;visibility:hidden;transition:all .4s cubic-bezier(.34,1.56,.64,1)}
+
+#kaitou-chat-window:fullscreen{width:100vw;height:100vh;max-width:100%;border-radius:0}
+
+#kaitou-chat-window.visible{transform:scale(1);opacity:1;visibility:visible}
+
+#kaitou-chat-window.shake{animation:shake-enhanced .5s cubic-bezier(.36,.07,.19,.97) both}
+
+@keyframes shake-enhanced{10%,90%{transform:scale(1) translate3d(-2px,0,0)}20%,80%{transform:scale(1) translate3d(3px,0,0)}30%,50%,70%{transform:scale(1) translate3d(-5px,0,0)}40%,60%{transform:scale(1) translate3d(5px,0,0)}}
+
+#kaitou-chat-header{background:linear-gradient(135deg, #ff4f4f, #ff7b7b);color:#fff;padding:20px;font-weight:800;display:flex;justify-content:space-between;align-items:center;position:relative;overflow:hidden;flex-shrink:0;border-bottom:2px solid #ffaa00;text-shadow:2px 2px 4px rgba(0,0,0,.5)}
+
+#kaitou-chat-header::after{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,transparent,rgba(255,170,0,1),transparent);animation:scan-enhanced 3s linear infinite}
+
+@keyframes scan-enhanced{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* Enhanced 3D Battle Environment */
+#kaitou-battle-environment {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, 
+        #87CEEB 0%,     /* Sky blue */
+        #98D8E8 30%,    /* Light blue */
+        #FFE4B5 70%,    /* Moccasin */
+        #DEB887 100%    /* Burlywood */
+    );
+    z-index: 1;
+    display: none;
+}
+
+#battle-ground-plane {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    background: 
+        linear-gradient(45deg, transparent 25%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.1) 50%, transparent 50%, transparent 75%, rgba(0,0,0,0.1) 75%),
+        linear-gradient(-45deg, transparent 25%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.1) 50%, transparent 50%, transparent 75%, rgba(0,0,0,0.1) 75%),
+        linear-gradient(135deg, #4a9eff, #7bc5ff);
+    background-size: 20px 20px, 20px 20px, 100% 100%;
+    transform: perspective(400px) rotateX(75deg);
+    transform-origin: bottom;
+    box-shadow: 
+        inset 0 0 100px rgba(0,0,0,0.2),
+        0 0 50px rgba(74, 158, 255, 0.3);
+}
+
+/* Enhanced Battle System */
+#kaitou-battle-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 50;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+#battle-arena-3d {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    perspective: 1000px;
+    background: 
+        radial-gradient(circle at 30% 20%, rgba(255,200,100,0.3) 0%, transparent 50%),
+        linear-gradient(180deg, #001122 0%, #003366 30%, #004080 60%, #0066cc 100%);
+    overflow: hidden;
+}
+
+#battle-ground {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) perspective(800px) rotateX(70deg);
+    width: 120%;
+    height: 60%;
+    background: 
+        repeating-linear-gradient(
+            0deg,
+            #2a4d6b 0px,
+            #2a4d6b 2px,
+            #1e3a52 2px,
+            #1e3a52 20px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            #2a4d6b 0px,
+            #2a4d6b 2px,
+            #1e3a52 2px,
+            #1e3a52 20px
+        ),
+        linear-gradient(135deg, #3498db, #2980b9);
+    box-shadow: 
+        0 0 100px rgba(52, 152, 219, 0.4),
+        inset 0 0 50px rgba(0,0,0,0.3);
+    border-radius: 20px;
+}
+
+#battle-fighters-container {
+    position: absolute;
+    bottom: 20%;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 10%;
+    z-index: 55;
+}
+
+.fighter-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+}
+
+#kaitou-fighter-viewer, #enemy-fighter-viewer {
+    width: 100%;
+    height: 100%;
+    --poster-color: transparent;
+}
+
+/* Enhanced Combat UI */
+#battle-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 60;
+    pointer-events: none;
+}
+
+.fighter-stats {
+    position: absolute;
+    top: 20px;
+    background: rgba(0,0,0,0.8);
+    border: 2px solid #ffaa00;
+    border-radius: 15px;
+    padding: 15px;
+    color: white;
+    font-family: 'Orbitron', monospace;
+    font-weight: bold;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+
+#player-stats {
+    left: 20px;
+}
+
+#enemy-stats {
+    right: 20px;
+}
+
+.fighter-name {
+    font-size: 14px;
+    margin-bottom: 8px;
+    text-align: center;
+    color: #ffaa00;
+    text-shadow: 0 0 10px rgba(255,170,0,0.5);
+}
+
+.health-bar-container {
+    width: 150px;
+    height: 20px;
+    background: rgba(50,50,50,0.9);
+    border: 2px solid #333;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.health-bar {
+    height: 100%;
+    border-radius: 8px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.health-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: health-shine 2s infinite;
+}
+
+@keyframes health-shine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+#player-health-bar {
+    background: linear-gradient(90deg, #27ae60, #2ecc71, #58d68d);
+    box-shadow: 0 0 10px rgba(46,204,113,0.5);
+}
+
+#enemy-health-bar {
+    background: linear-gradient(90deg, #e74c3c, #c0392b, #ec7063);
+    box-shadow: 0 0 10px rgba(231,76,60,0.5);
+}
+
+.health-text {
+    font-size: 12px;
+    text-align: center;
+    color: #ecf0f1;
+}
+
+/* Enhanced Special Meter */
+#special-meter-container {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    height: 30px;
+    background: rgba(0,0,0,0.8);
+    border: 3px solid #f1c40f;
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+#special-meter-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #f1c40f, #f39c12, #e67e22);
+    border-radius: 17px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 20px rgba(241,196,15,0.6);
+    position: relative;
+}
+
+#special-meter-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    animation: special-shine 1.5s infinite;
+}
+
+@keyframes special-shine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+#special-meter-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 14px;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    font-family: 'Orbitron', monospace;
+}
+
+/* Enhanced Battle Controls */
+#battle-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.battle-action-btn {
+    background: linear-gradient(145deg, #3498db, #2980b9);
+    color: white;
+    border: 3px solid #2c3e50;
+    padding: 15px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Orbitron', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 
+        0 5px 15px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.battle-action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.battle-action-btn:hover:not(:disabled)::before {
+    left: 100%;
+}
+
+.battle-action-btn:hover:not(:disabled) {
+    background: linear-gradient(145deg, #2980b9, #3498db);
+    transform: translateY(-3px);
+    box-shadow: 
+        0 8px 25px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.battle-action-btn:active {
+    transform: translateY(-1px);
+}
+
+.battle-action-btn:disabled {
+    background: linear-gradient(145deg, #7f8c8d, #95a5a6);
+    border-color: #5d6d7e;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+#special-attack-btn {
+    grid-column: 1 / -1;
+    background: linear-gradient(145deg, #e67e22, #d35400);
+    border-color: #a0522d;
+    font-size: 16px;
+    padding: 18px 25px;
+}
+
+#special-attack-btn:hover:not(:disabled) {
+    background: linear-gradient(145deg, #d35400, #e67e22);
+    box-shadow: 
+        0 10px 30px rgba(230,126,34,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* Enhanced Combo System */
+#combo-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #f1c40f;
+    font-size: 48px;
+    font-weight: bold;
+    font-family: 'Orbitron', monospace;
+    text-shadow: 
+        3px 3px 6px rgba(0,0,0,0.8),
+        0 0 20px rgba(241,196,15,0.6);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    z-index: 70;
+}
+
+#combo-display.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* Enhanced Damage Numbers */
+.damage-number {
+    position: absolute;
+    color: #e74c3c;
+    font-size: 32px;
+    font-weight: bold;
+    font-family: 'Orbitron', monospace;
+    text-shadow: 
+        2px 2px 4px rgba(0,0,0,0.8),
+        0 0 15px rgba(231,76,60,0.6);
+    animation: damage-float 1.5s ease-out forwards;
+    z-index: 65;
+    pointer-events: none;
+}
+
+.damage-number.critical {
+    color: #f1c40f;
+    font-size: 42px;
+    text-shadow: 
+        3px 3px 6px rgba(0,0,0,0.8),
+        0 0 20px rgba(241,196,15,0.8);
+}
+
+.damage-number.heal {
+    color: #27ae60;
+    text-shadow: 
+        2px 2px 4px rgba(0,0,0,0.8),
+        0 0 15px rgba(39,174,96,0.6);
+}
+
+@keyframes damage-float {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(0.5);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-80px) scale(0.8);
+    }
+}
+
+/* Enhanced Battle Log */
+#battle-log {
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    width: 250px;
+    height: 200px;
+    background: rgba(0,0,0,0.9);
+    border: 2px solid #34495e;
+    border-radius: 15px;
+    padding: 15px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #27ae60;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+
+.battle-log-entry {
+    margin-bottom: 8px;
+    padding: 5px;
+    border-left: 3px solid #27ae60;
+    background: rgba(39,174,96,0.1);
+    border-radius: 3px;
+    animation: log-entry-appear 0.5s ease-out;
+}
+
+.battle-log-entry.system {
+    border-left-color: #3498db;
+    background: rgba(52,152,219,0.1);
+    color: #3498db;
+}
+
+.battle-log-entry.damage {
+    border-left-color: #e74c3c;
+    background: rgba(231,76,60,0.1);
+    color: #e74c3c;
+}
+
+@keyframes log-entry-appear {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Victory/Defeat Screen */
+#battle-result-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 80;
+    backdrop-filter: blur(15px);
+}
+
+.result-content {
+    text-align: center;
+    color: white;
+    font-family: 'Orbitron', monospace;
+}
+
+.result-title {
+    font-size: 72px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    animation: result-glow 2s ease-in-out infinite alternate;
+}
+
+.result-title.victory {
+    color: #f1c40f;
+    text-shadow: 
+        0 0 20px rgba(241,196,15,0.8),
+        0 0 40px rgba(241,196,15,0.6),
+        0 0 60px rgba(241,196,15,0.4);
+}
+
+.result-title.defeat {
+    color: #e74c3c;
+    text-shadow: 
+        0 0 20px rgba(231,76,60,0.8),
+        0 0 40px rgba(231,76,60,0.6),
+        0 0 60px rgba(231,76,60,0.4);
+}
+
+@keyframes result-glow {
+    from {
+        filter: brightness(1);
+    }
+    to {
+        filter: brightness(1.2);
+    }
+}
+
+.result-stats {
+    font-size: 18px;
+    margin-bottom: 30px;
+    color: #bdc3c7;
+}
+
+.continue-btn {
+    background: linear-gradient(145deg, #27ae60, #2ecc71);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 25px;
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.continue-btn:hover {
+    background: linear-gradient(145deg, #2ecc71, #27ae60);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+}
+
+/* Rest of the original styles with enhancements... */
+.chat-message{padding:12px 18px;border-radius:25px;max-width:85%;line-height:1.5;position:relative;z-index:11;flex-shrink:0;backdrop-filter:blur(10px);box-shadow:0 2px 10px rgba(0,0,0,0.2)}
+
+.user-message{background:linear-gradient(135deg, #0072C6, #0056b3);color:#fff;align-self:flex-end;border-bottom-right-radius:8px;margin-right:8px;border:1px solid rgba(255,255,255,0.2)}
+
+.bot-message{background:rgba(240,240,240,.9);color:#333;align-self:flex-start;border-bottom-left-radius:8px;border:1px solid rgba(0,0,0,0.1);transition:all .3s ease}
+
+/* Dark mode enhancements */
+.kaitou-dark-mode #kaitou-chat-window{background:linear-gradient(135deg, #0f0f23, #1a1a2e);border-color:#ff6b35}
+.kaitou-dark-mode #kaitou-chat-header{background:linear-gradient(135deg, #ff6b35, #ff8c42)}
+.kaitou-dark-mode .bot-message{background:rgba(60,60,60,0.9);color:#e0e0e0;border-color:rgba(255,255,255,0.1)}
+
+/* Continue with rest of original CSS... */
+</style>
+
+<!-- HTML Structure with Enhanced Battle System -->
+<div id="kaitou-chatbot-container">
+  <button id="kaitou-chat-button">🤖</button>
+  
+  <div id="kaitou-chat-window">
+    <div id="kaitou-chat-header">
+      <span>Kaitou-kun Elite</span>
+      <div id="kaitou-header-controls">
+        <span id="kaitou-coin-balance" title="User Hub">💰 <span id="coin-amount">0</span></span>
+        <span id="mission-toggle-btn" class="header-btn" title="Misi">🎯</span>
+        <span id="animation-toggle-btn" class="header-btn" title="Animasi">✨</span> 
+        <span id="fullscreen-btn" class="header-btn" title="Layar Penuh">⛶</span>
+        <span id="close-btn" class="header-btn" title="Tutup">×</span>
+      </div>
+    </div>
+    
+    <!-- Enhanced 3D Battle Environment -->
+    <div id="kaitou-battle-overlay">
+      <div id="battle-arena-3d">
+        <div id="battle-ground"></div>
+        
+        <div id="battle-fighters-container">
+          <div class="fighter-container">
+            <model-viewer 
+              id="kaitou-fighter-viewer" 
+              src="https://files.catbox.moe/qe6apf.glb" 
+              alt="Kaitou Fighter" 
+              autoplay 
+              animation-name="Idle"
+              camera-orbit="0deg 75deg 2m"
+              camera-target="0m 0.5m 0m"
+              shadow-intensity="2"
+              environment-image="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/dikhololo_night_1k.hdr">
+            </model-viewer>
+          </div>
+          
+          <div class="fighter-container">
+            <model-viewer 
+              id="enemy-fighter-viewer" 
+              src="https://files.catbox.moe/qe6apf.glb" 
+              alt="Enemy Fighter" 
+              autoplay 
+              animation-name="Idle"
+              camera-orbit="180deg 75deg 2m"
+              camera-target="0m 0.5m 0m"
+              shadow-intensity="2"
+              environment-image="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/dikhololo_night_1k.hdr">
+            </model-viewer>
+          </div>
+        </div>
+        
+        <!-- Enhanced Battle HUD -->
+        <div id="battle-hud">
+          <div id="player-stats" class="fighter-stats">
+            <div class="fighter-name">KAITOU-KUN</div>
+            <div class="health-bar-container">
+              <div id="player-health-bar" class="health-bar"></div>
+            </div>
+            <div id="player-health-text" class="health-text">100/100</div>
+          </div>
+          
+          <div id="enemy-stats" class="fighter-stats">
+            <div class="fighter-name">MONSTER X</div>
+            <div class="health-bar-container">
+              <div id="enemy-health-bar" class="health-bar"></div>
+            </div>
+            <div id="enemy-health-text" class="health-text">100/100</div>
+          </div>
+          
+          <div id="special-meter-container">
+            <div id="special-meter-bar"></div>
+            <div id="special-meter-text">SPECIAL READY</div>
+          </div>
+          
+          <div id="combo-display">COMBO x1</div>
+          
+          <div id="battle-log">
+            <div class="battle-log-entry system">Battle System Initialized</div>
+            <div class="battle-log-entry">Ready to fight!</div>
+          </div>
+          
+          <div id="battle-controls">
+            <button class="battle-action-btn" data-action="punch">PUNCH</button>
+            <button class="battle-action-btn" data-action="kick">KICK</button>
+            <button class="battle-action-btn" data-action="dodge">DODGE</button>
+            <button class="battle-action-btn" data-action="combo">COMBO</button>
+            <button class="battle-action-btn" data-action="block">BLOCK</button>
+            <button class="battle-action-btn" data-action="counter">COUNTER</button>
+            <button id="special-attack-btn" class="battle-action-btn" data-action="special" disabled>ULTIMATE ATTACK</button>
+          </div>
+        </div>
+        
+        <div id="battle-result-screen">
+          <div class="result-content">
+            <div id="result-title" class="result-title">VICTORY</div>
+            <div id="result-stats" class="result-stats">
+              <div>Damage Dealt: <span id="damage-dealt">0</span></div>
+              <div>Combo Count: <span id="combo-count">0</span></div>
+              <div>Time: <span id="battle-time">00:00</span></div>
+            </div>
+            <button id="continue-btn" class="continue-btn">CONTINUE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Rest of the original components with enhancements -->
+    <div id="kaitou-chat-body-container">
+      <model-viewer 
+        id="kaitou-3d-viewer" 
+        src="https://files.catbox.moe/qe6apf.glb" 
+        alt="Kaitou 3D Model" 
+        autoplay 
+        animation-name="Idle" 
+        camera-controls 
+        shadow-intensity="2" 
+        exposure="1.2" 
+        camera-orbit="0deg 88deg 1.0m" 
+        camera-target="0m 0.5m 0m"
+        environment-image="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_03_1k.hdr"
+        loading="lazy">
+      </model-viewer>
+      <div id="kaitou-chat-messages">
+        <div id="kaitou-chat-scroll-area"></div>
+      </div>
+    </div>
+    
+    <div id="kaitou-chat-input-area">
+      <div id="kaitou-input-wrapper">
+        <input type="file" id="kaitou-image-input" accept="image/*" style="display: none;" />
+        <button id="kaitou-upload-btn" title="Upload Image">📷</button>
+        <input type="text" id="kaitou-chat-input" placeholder="Type your message..." />
+        <button id="kaitou-send-btn">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="kaitou-toast-notification">
+  <div id="kaitou-toast-text">Experience Next-Gen AI Combat! <strong>Try Kaitou-kun Elite!</strong> 🚀</div>
+  <button id="kaitou-toast-close">×</button>
+</div>
+
+<!-- Enhanced Audio System -->
+<audio id="kaitou-open-sound" src="https://files.catbox.moe/zhjaeh.mp3" preload="auto"></audio>
+<audio id="sfx-punch" src="https://files.catbox.moe/pfszlh.mp3" preload="auto"></audio>
+<audio id="sfx-kick" src="https://files.catbox.moe/e2kyaj.mp3" preload="auto"></audio>
+<audio id="sfx-special" src="https://files.catbox.moe/rh2bcy.mp3" preload="auto"></audio>
+<audio id="sfx-victory" src="https://files.catbox.moe/victory.mp3" preload="auto"></audio>
+<audio id="sfx-combo" src="https://files.catbox.moe/combo.mp3" preload="auto"></audio>
