@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JARVIS MARK IV - Repulsor</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0; background-color: #000; overflow: hidden;
+            font-family: 'Orbitron', sans-serif; color: #0ff;
+            touch-action: none;
+        }
+
+        .input_video { display: none; }
+        .output_canvas {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            object-fit: cover; transform: scaleX(-1); z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+        }
+
+        /* --- NODES (Buttons) --- */
+        .node-btn {
+            position: absolute; width: 70px; height: 70px;
+            border-radius: 50%; border: 2px solid #00f3ff;
+            background: rgba(0, 20, 40, 0.6);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            box-shadow: 0 0 10px #00f3ff;
+            transform: translate(-50%, -50%);
+            pointer-events: auto;
+        }
+        .node-btn span { font-size: 14px; font-weight: bold; }
+        
+        /* POSITIONS */
+        #node-chart { top: 20%; left: 20%; }
+        #node-list { top: 20%; left: 80%; }
+
+        /* --- CARDS --- */
+        .holo-card {
+            position: absolute;
+            background: rgba(0, 10, 20, 0.9);
+            border: 1px solid #00f3ff;
+            border-radius: 10px;
+            padding: 10px;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.3s ease-out;
+            pointer-events: auto; display: flex; flex-direction: column;
+        }
+        .close-btn {
+            position: absolute; top: 5px; right: 5px; color: #ff003c;
+            border: 1px solid #ff003c; width: 20px; height: 20px;
+            border-radius: 50%; text-align: center; line-height: 18px; cursor: pointer;
+        }
+
+        /* IPK SPECIAL CARD */
+        #card-ipk {
+            top: 50%; left: 50%; width: 250px; text-align: center;
+            border: 2px solid #fff;
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.5);
+        }
+        .big-ipk { font-size: 4.5em; font-weight: bold; color: #fff; text-shadow: 0 0 30px #0ff; }
+        
+        /* OTHERS */
+        #card-chart { top: 50%; left: 50%; width: 300px; height: 200px; }
+        #card-list { top: 50%; left: 50%; width: 250px; height: 350px; }
+
+        /* GESTURE FEEDBACK */
+        #gesture-hint {
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            font-size: 12px; color: rgba(0, 243, 255, 0.7);
+            animation: pulse-text 2s infinite;
+        }
+        @keyframes pulse-text { 0%{opacity:0.5} 50%{opacity:1} 100%{opacity:0.5} }
+
+        .charging-ring {
+            position: absolute; border-radius: 50%;
+            border: 5px solid #fff;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 50;
+            display: none;
+        }
+
+        /* Helpers */
+        .scroll-list { overflow-y: auto; flex: 1; font-size: 10px; margin-top: 10px; }
+        table { width: 100%; } td { border-bottom: 1px solid #333; padding: 5px; }
+        .grabbed { z-index: 999 !important; border-color: #fff; box-shadow: 0 0 20px #fff; }
+    </style>
+</head>
+<body>
+
+    <video class="input_video" playsinline></video>
+    <canvas class="output_canvas"></canvas>
+    
+    <!-- Charging Visual -->
+    <div id="charge-circle" class="charging-ring"></div>
+
+    <div id="ui-layer">
+        
+        <!-- INSTRUCTION -->
+        <div id="gesture-hint">
+            <div>PINCH to Open Menu | 🖐️ OPEN PALM TO REVEAL GPA</div>
+        </div>
+
+        <!-- MENU NODES -->
+        <div id="node-chart" class="node-btn"><span>GRF</span></div>
+        <div id="node-list" class="node-btn"><span>LIST</span></div>
+
+        <!-- CONTENT CARDS -->
+        
+        <!-- 1. IPK CARD (HIDDEN INITIALLY) -->
+        <div id="card-ipk" class="holo-card">
+            <div class="close-btn" id="close-ipk">X</div>
+            <div style="font-size: 12px; letter-spacing: 2px; margin-top: 10px;">CORE DATA REVEALED</div>
+            <div class="big-ipk" id="val-ipk">3.34</div>
+            <div style="font-size: 10px;">SATRIA RAFIE // 24053010036</div>
+        </div>
+
+        <!-- 2. CHART CARD -->
+        <div id="card-chart" class="holo-card">
+            <div class="close-btn" id="close-chart">X</div>
+            <div style="flex:1;"><canvas id="chartCanvas"></canvas></div>
+        </div>
+
+<!-- 3. LIST CARD (FULL DATA 20 MATKUL) -->
+        <div id="card-list" class="holo-card">
+            <div class="close-btn" id="close-list">X</div>
+            <div style="border-bottom:1px solid #00f3ff; margin-bottom:5px; font-size:12px; font-weight:bold;">
+                COMPLETE TRANSCRIPT
+            </div>
+            <div class="scroll-list">
+                <table>
+                    <!-- Semester 1 -->
+                    <tr><td>Pancasila</td><td style="color:#0f0">A</td></tr>
+                    <tr><td>Bahasa Inggris</td><td style="color:#fc0">B+</td></tr>
+                    <tr><td>Bahasa Indonesia</td><td style="color:#0f0">A</td></tr>
+                    <tr><td>Seni Budaya Nst</td><td style="color:#fc0">B+</td></tr>
+                    <tr><td>Dasar Desain I</td><td style="color:#ff003c">C+</td></tr> <!-- Merah karena C+ -->
+                    <tr><td>Gambar Bentuk</td><td style="color:#fc0">B</td></tr>
+                    <tr><td>Gambar Teknik</td><td style="color:#0f0">A</td></tr>
+                    
+                    <!-- Semester 2 -->
+                    <tr><td>Agama Islam</td><td style="color:#0f0">A-</td></tr>
+                    <tr><td>Kewarganegaraan</td><td style="color:#0f0">A-</td></tr>
+                    <tr><td>Gambar Interior</td><td style="color:#fc0">B-</td></tr>
+                    <tr><td>Gbr Kerja Intr</td><td style="color:#fc0">B</td></tr>
+                    <tr><td>Sains Interior</td><td style="color:#0f0">A-</td></tr>
+                    <tr><td>Dasar Desain II</td><td style="color:#fc0">B</td></tr>
+                    <tr><td>Sejarah Desain</td><td style="color:#fc0">B+</td></tr>
+                    
+                    <!-- Semester 3 -->
+                    <tr><td>Bela Negara</td><td style="color:#0f0">A-</td></tr>
+                    <tr><td>CAD Interior</td><td style="color:#fc0">B+</td></tr>
+                    <tr><td>Metodologi Desain</td><td style="color:#0f0">A-</td></tr>
+                    <tr><td>Desain Mebel I</td><td style="color:#fc0">B</td></tr>
+                    <tr><td>Desain Interior I</td><td style="color:#fc0">B</td></tr>
+                    <tr><td>Ergonomi</td><td style="color:#0f0">A-</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+    const chargeCircle = document.getElementById('charge-circle');
+    
+    // UI Elements
+    const cards = {
+        ipk: document.getElementById('card-ipk'),
+        chart: document.getElementById('card-chart'),
+        list: document.getElementById('card-list')
+    };
+    const nodes = {
+        chart: document.getElementById('node-chart'),
+        list: document.getElementById('node-list')
+    };
+
+    // State
+    let isRevealedIPK = false;
+    let chargeLevel = 0; // 0 to 100
+    const CHARGE_SPEED = 2; // Speed of charging
+    
+    let isGrabbing = false;
+    let grabbedEl = null;
+    let grabOffset = {x:0, y:0};
+
+    // --- CHART LOGIC ---
+    let chartInstance = null;
+    function initChart() {
+        if(chartInstance) return;
+        const ctx = document.getElementById('chartCanvas').getContext('2d');
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['S1', 'S2', 'S3'],
+                datasets: [{
+                    label: 'IPS', data: [3.475, 3.30, 3.25],
+                    borderColor: '#00f3ff', backgroundColor: 'rgba(0,243,255,0.2)', fill: true
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{display:false}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}, min:2.5}} }
+        });
+    }
+
+    // --- INTERACTION LOGIC ---
+    function openCard(type) {
+        cards[type].style.transform = "translate(-50%, -50%) scale(1)";
+        if(type === 'chart') initChart();
+    }
+    
+    function closeCard(type) {
+        cards[type].style.transform = "translate(-50%, -50%) scale(0)";
+        if(type === 'ipk') {
+            isRevealedIPK = false; // Allow re-reveal
+            document.getElementById('val-ipk').innerText = "0.00";
+        }
+    }
+
+    // Setup Close Buttons
+    document.getElementById('close-chart').onclick = () => closeCard('chart');
+    document.getElementById('close-list').onclick = () => closeCard('list');
+    document.getElementById('close-ipk').onclick = () => closeCard('ipk');
+
+    function revealIPK() {
+        if(isRevealedIPK) return;
+        isRevealedIPK = true;
+        
+        // SFX Visual
+        cards.ipk.style.transform = "translate(-50%, -50%) scale(1)";
+        
+        // Animate Number
+        let obj = document.getElementById('val-ipk');
+        let start = 0; let end = 3.34;
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / 1000, 1);
+            obj.innerHTML = (progress * (end - start) + start).toFixed(2);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    // --- HAND LOGIC ---
+    function checkHit(x, y, el) {
+        const rect = el.getBoundingClientRect();
+        return (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom);
+    }
+
+    function isHandOpen(landmarks) {
+        // Simple logic: Tips are above PIPs (for upright hand)
+        // Or better: Distance from Wrist(0) to Tips > Distance Wrist to PIP
+        // 8=IndexTip, 5=IndexPip
+        const tips = [8, 12, 16, 20];
+        const pips = [5, 9, 13, 17];
+        let openFingers = 0;
+        
+        for(let i=0; i<4; i++) {
+            // Calculate distance from wrist (0)
+            const dTip = dist(landmarks[0], landmarks[tips[i]]);
+            const dPip = dist(landmarks[0], landmarks[pips[i]]);
+            if(dTip > dPip) openFingers++;
+        }
+        return openFingers >= 4; // At least 4 fingers extended (exclude thumb for stability)
+    }
+    
+    function dist(p1, p2) {
+        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    }
+
+    function onResults(results) {
+        canvasElement.width = window.innerWidth;
+        canvasElement.height = window.innerHeight;
+        
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.translate(canvasElement.width, 0);
+        canvasCtx.scale(-1, 1);
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const landmarks = results.multiHandLandmarks[0];
+            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: 'rgba(0, 255, 255, 0.3)', lineWidth: 1});
+
+            // Get Coordinates for Interaction
+            const indexTip = landmarks[8];
+            const thumbTip = landmarks[4];
+            
+            const x1 = (1 - indexTip.x) * window.innerWidth; 
+            const y1 = indexTip.y * window.innerHeight;
+            const x2 = (1 - thumbTip.x) * window.innerWidth;
+            const y2 = thumbTip.y * window.innerHeight;
+            
+            const cx = (x1 + x2) / 2;
+            const cy = (y1 + y2) / 2;
+            const pinchDist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const isPinching = pinchDist < 60;
+
+            // --- 1. GESTURE DETECTION (OPEN PALM) ---
+            if(!isRevealedIPK && isHandOpen(landmarks) && !isPinching) {
+                // Charging Logic
+                chargeLevel += CHARGE_SPEED;
+                
+                // Draw Charging Circle at Hand Center (using Landmark 9 - Middle Finger MCP)
+                const palmX = (1 - landmarks[9].x) * window.innerWidth;
+                const palmY = landmarks[9].y * window.innerHeight;
+                
+                chargeCircle.style.display = 'block';
+                chargeCircle.style.left = palmX + 'px';
+                chargeCircle.style.top = palmY + 'px';
+                chargeCircle.style.width = (50 + chargeLevel) + 'px';
+                chargeCircle.style.height = (50 + chargeLevel) + 'px';
+                chargeCircle.style.opacity = chargeLevel / 100;
+                
+                if(chargeLevel >= 100) {
+                    revealIPK();
+                    chargeLevel = 0;
+                    chargeCircle.style.display = 'none';
+                }
+            } else {
+                // Reset charge if hand closes or pinches
+                chargeLevel = 0;
+                chargeCircle.style.display = 'none';
+            }
+
+            // --- 2. PINCH INTERACTION (MENU & DRAG) ---
+            if(isPinching) {
+                // Visual Cursor for Pinch
+                canvasCtx.beginPath();
+                canvasCtx.arc((1-indexTip.x)*canvasElement.width, indexTip.y*canvasElement.height, 10, 0, 2*Math.PI);
+                canvasCtx.fillStyle = "#ff003c";
+                canvasCtx.fill();
+
+                if(!isGrabbing) {
+                    // Check Menu Hits
+                    if(checkHit(cx, cy, nodes.chart)) openCard('chart');
+                    else if(checkHit(cx, cy, nodes.list)) openCard('list');
+                    
+                    // Check Card Drags
+                    else {
+                        ['ipk', 'chart', 'list'].forEach(id => {
+                            const card = cards[id];
+                            if(card.style.transform.includes('scale(1)') && checkHit(cx, cy, card)) {
+                                isGrabbing = true;
+                                grabbedEl = card;
+                                grabbedEl.classList.add('grabbed');
+                                const rect = grabbedEl.getBoundingClientRect();
+                                grabbedEl.style.transform = 'none';
+                                grabbedEl.style.left = rect.left + 'px';
+                                grabbedEl.style.top = rect.top + 'px';
+                                grabOffset.x = cx - rect.left;
+                                grabOffset.y = cy - rect.top;
+                            }
+                        });
+                    }
+                } else {
+                    // Dragging
+                    if(grabbedEl) {
+                        grabbedEl.style.left = (cx - grabOffset.x) + 'px';
+                        grabbedEl.style.top = (cy - grabOffset.y) + 'px';
+                    }
+                }
+            } else {
+                if(isGrabbing) {
+                    isGrabbing = false;
+                    if(grabbedEl) grabbedEl.classList.remove('grabbed');
+                    grabbedEl = null;
+                }
+            }
+
+        }
+        canvasCtx.restore();
+    }
+
+    const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    hands.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+        onFrame: async () => { await hands.send({image: videoElement}); },
+        width: 640, height: 480, facingMode: 'user'
+    });
+    camera.start();
+</script>
+</body>
+</html>
