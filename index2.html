@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JARVIS MARK V - Rotation</title>
+    
+    <!-- MediaPipe & Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0; background-color: #000; overflow: hidden;
+            font-family: 'Orbitron', sans-serif; color: #0ff;
+            touch-action: none;
+        }
+
+        .input_video { display: none; }
+        .output_canvas {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            object-fit: cover; transform: scaleX(-1); z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+            perspective: 1000px; /* Agar efek 3D terasa */
+        }
+
+        /* --- NODES (Buttons) --- */
+        .node-btn {
+            position: absolute; width: 70px; height: 70px;
+            border-radius: 50%; border: 2px solid #00f3ff;
+            background: rgba(0, 20, 40, 0.6);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            box-shadow: 0 0 10px #00f3ff;
+            transform: translate(-50%, -50%); /* Default positioning */
+            pointer-events: auto;
+        }
+        
+        #node-chart { top: 20%; left: 20%; }
+        #node-list { top: 20%; left: 80%; }
+
+        /* --- CARDS --- */
+        .holo-card {
+            position: absolute;
+            background: rgba(0, 10, 20, 0.9);
+            border: 1px solid #00f3ff;
+            border-radius: 12px;
+            padding: 10px;
+            pointer-events: auto; 
+            display: flex; flex-direction: column;
+            /* Penting untuk transformasi manual via JS */
+            transform-origin: center center; 
+            opacity: 0; /* Hidden default */
+            /* Kita tidak pakai transition CSS untuk transform agar responsif saat rotate */
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+        }
+
+        .close-btn {
+            position: absolute; top: -10px; right: -10px; color: white; background: #ff003c;
+            width: 25px; height: 25px; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; font-size: 14px; box-shadow: 0 0 5px #ff003c;
+        }
+
+        /* IPK CARD */
+        #card-ipk {
+            width: 260px; text-align: center;
+            border: 2px solid #fff;
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.5);
+            /* Initial pos centered */
+            left: 50%; top: 50%;
+        }
+        .big-ipk { font-size: 4.5em; font-weight: bold; color: #fff; text-shadow: 0 0 30px #0ff; }
+        
+        #card-chart { width: 300px; height: 220px; left: 50%; top: 50%; }
+        #card-list { width: 260px; height: 350px; left: 50%; top: 50%; }
+
+        .charging-ring {
+            position: absolute; border-radius: 50%;
+            border: 6px solid #fff;
+            box-shadow: 0 0 20px #0ff;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 50; display: none;
+        }
+
+        /* GESTURE HINT */
+        #hint {
+            position: fixed; bottom: 20px; width: 100%; text-align: center;
+            font-size: 10px; color: rgba(0, 255, 255, 0.6);
+            animation: blink 2s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .scroll-list { overflow-y: auto; flex: 1; font-size: 10px; margin-top: 5px; }
+        table { width: 100%; border-collapse: collapse;} 
+        td { border-bottom: 1px solid #333; padding: 5px; }
+
+        .grabbed { border-color: #fff; box-shadow: 0 0 30px #fff; z-index: 999; }
+    </style>
+</head>
+<body>
+
+    <video class="input_video" playsinline></video>
+    <canvas class="output_canvas"></canvas>
+    <div id="charge-circle" class="charging-ring"></div>
+    
+    <div id="hint">🖐️ OPEN PALM for IPK | 👌 PINCH & TWIST to Move/Rotate</div>
+
+    <div id="ui-layer">
+        <!-- NODES -->
+        <div id="node-chart" class="node-btn"><span>GRAFIK</span></div>
+        <div id="node-list" class="node-btn"><span>NILAI</span></div>
+
+        <!-- CARDS (Initially Scaled 0 via JS logic) -->
+        <div id="card-ipk" class="holo-card">
+            <div class="close-btn" id="close-ipk">X</div>
+            <div style="margin-top:10px; font-size:10px; letter-spacing:2px;">GPA UNLOCKED</div>
+            <div class="big-ipk" id="val-ipk">3.34</div>
+            <div style="font-size:10px;">SATRIA RAFIE</div>
+        </div>
+
+        <div id="card-chart" class="holo-card">
+            <div class="close-btn" id="close-chart">X</div>
+            <div style="flex:1;"><canvas id="chartCanvas"></canvas></div>
+        </div>
+
+        <div id="card-list" class="holo-card">
+            <div class="close-btn" id="close-list">X</div>
+            <div class="scroll-list">
+                <table>
+                    <tr><td>Pancasila</td><td style="color:#0f0">A</td></tr>
+                    <tr><td>B. Inggris</td><td style="color:#fc0">B+</td></tr>
+                    <tr><td>B. Indonesia</td><td style="color:#0f0">A</td></tr>
+                    <tr><td>Seni Budaya</td><td style="color:#fc0">B+</td></tr>
+                    <tr><td>Gbr Teknik</td><td style="color:#0f0">A</td></tr>
+                    <tr><td>Sains Interior</td><td style="color:#0f0">A-</td></tr>
+                    <tr><td>Metodologi</td><td style="color:#0f0">A-</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+    const chargeCircle = document.getElementById('charge-circle');
+    
+    // --- STATE MANAGEMENT ---
+    // Menyimpan posisi & rotasi setiap elemen secara manual
+    const elState = {
+        'card-ipk':   { visible: false, x: window.innerWidth/2, y: window.innerHeight/2, rot: 0, scale: 0 },
+        'card-chart': { visible: false, x: window.innerWidth/2, y: window.innerHeight/2, rot: 0, scale: 0 },
+        'card-list':  { visible: false, x: window.innerWidth/2, y: window.innerHeight/2, rot: 0, scale: 0 }
+    };
+
+    // Grab State
+    let isGrabbing = false;
+    let grabbedId = null;
+    let offset = { x: 0, y: 0 };
+    let startHandAngle = 0;
+    let startElAngle = 0;
+
+    // Charging State
+    let chargeLevel = 0;
+    
+    // Setup Chart
+    let chartInstance = null;
+    function initChart() {
+        if(chartInstance) return;
+        const ctx = document.getElementById('chartCanvas').getContext('2d');
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['S1', 'S2', 'S3'],
+                datasets: [{ label: 'IPS', data: [3.475, 3.30, 3.25], borderColor: '#00f3ff', backgroundColor: 'rgba(0,243,255,0.2)', fill: true }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: {legend:false}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}, min:2.5}} }
+        });
+    }
+
+    // --- UI HELPERS ---
+    function updateElementTransform(id) {
+        const el = document.getElementById(id);
+        const s = elState[id];
+        // Apply CSS Transform: Translate first, then Rotate, then Scale
+        el.style.transform = `translate(${s.x - el.offsetWidth/2}px, ${s.y - el.offsetHeight/2}px) rotate(${s.rot}deg) scale(${s.scale})`;
+        el.style.opacity = s.visible ? 1 : 0;
+    }
+
+    function openCard(id) {
+        elState[id].visible = true;
+        elState[id].scale = 1; // Pop animation handled by loop or simple set
+        elState[id].x = window.innerWidth / 2; // Reset center
+        elState[id].y = window.innerHeight / 2;
+        elState[id].rot = 0;
+        updateElementTransform(id);
+        if(id === 'card-chart') initChart();
+    }
+
+    function closeCard(id) {
+        elState[id].visible = false;
+        elState[id].scale = 0;
+        updateElementTransform(id);
+        if(id === 'card-ipk') { 
+            chargeLevel = 0; // Reset charge capability
+            document.getElementById('val-ipk').innerText = "0.00";
+        }
+    }
+
+    // Close Button Listeners
+    ['close-ipk', 'close-chart', 'close-list'].forEach(btnId => {
+        document.getElementById(btnId).onclick = (e) => {
+            e.stopPropagation(); // Prevent re-grab
+            closeCard(btnId.replace('close-', 'card-'));
+        }
+    });
+
+    function revealIPK() {
+        if(elState['card-ipk'].visible) return;
+        openCard('card-ipk');
+        
+        // Count up animation
+        let obj = document.getElementById('val-ipk');
+        let start = 0; let end = 3.34;
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / 1000, 1);
+            obj.innerHTML = (progress * (end - start) + start).toFixed(2);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    // --- MATH HELPERS ---
+    function getAngleDegrees(p1, p2) {
+        return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+    }
+    function dist(p1, p2) {
+        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    }
+    function isHandOpen(lm) {
+        const tips = [8, 12, 16, 20];
+        const pips = [5, 9, 13, 17];
+        let open = 0;
+        for(let i=0; i<4; i++) {
+            if(dist(lm[0], lm[tips[i]]) > dist(lm[0], lm[pips[i]])) open++;
+        }
+        return open >= 4;
+    }
+
+    // --- MAIN LOOP ---
+    function onResults(results) {
+        canvasElement.width = window.innerWidth;
+        canvasElement.height = window.innerHeight;
+        
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.translate(canvasElement.width, 0);
+        canvasCtx.scale(-1, 1);
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const lm = results.multiHandLandmarks[0];
+            drawConnectors(canvasCtx, lm, HAND_CONNECTIONS, {color: 'rgba(0, 255, 255, 0.2)', lineWidth: 1});
+
+            // Coords
+            const indexTip = { x: (1-lm[8].x)*canvasElement.width, y: lm[8].y*canvasElement.height };
+            const thumbTip = { x: (1-lm[4].x)*canvasElement.width, y: lm[4].y*canvasElement.height };
+            
+            const cx = (indexTip.x + thumbTip.x) / 2;
+            const cy = (indexTip.y + thumbTip.y) / 2;
+            
+            // Interaction Metrics
+            const pinchGap = dist(indexTip, thumbTip);
+            const isPinching = pinchGap < 60;
+            const currentHandAngle = getAngleDegrees(thumbTip, indexTip); // Angle for rotation
+
+            // 1. OPEN PALM REVEAL (If not grabbing)
+            if(!elState['card-ipk'].visible && !isPinching && isHandOpen(lm)) {
+                chargeLevel += 3;
+                
+                // Visual Circle
+                const palmCenter = { x: (1-lm[9].x)*canvasElement.width, y: lm[9].y*canvasElement.height };
+                chargeCircle.style.display = 'block';
+                chargeCircle.style.width = (40 + chargeLevel)+'px';
+                chargeCircle.style.height = (40 + chargeLevel)+'px';
+                chargeCircle.style.left = palmCenter.x + 'px';
+                chargeCircle.style.top = palmCenter.y + 'px';
+                
+                if(chargeLevel > 100) {
+                    revealIPK();
+                    chargeLevel = 0;
+                    chargeCircle.style.display = 'none';
+                }
+            } else {
+                chargeLevel = 0;
+                chargeCircle.style.display = 'none';
+            }
+
+            // 2. PINCH LOGIC (MOVE & ROTATE)
+            if(isPinching) {
+                // Visual Dot
+                canvasCtx.beginPath(); canvasCtx.arc((1-lm[8].x)*canvasElement.width, lm[8].y*canvasElement.height, 8, 0, 2*Math.PI);
+                canvasCtx.fillStyle = "#ff003c"; canvasCtx.fill();
+
+                if(!isGrabbing) {
+                    // Check Hit - Nodes
+                    const nChart = document.getElementById('node-chart').getBoundingClientRect();
+                    const nList = document.getElementById('node-list').getBoundingClientRect();
+                    
+                    if(cx >= nChart.left && cx <= nChart.right && cy >= nChart.top && cy <= nChart.bottom) openCard('card-chart');
+                    else if(cx >= nList.left && cx <= nList.right && cy >= nList.top && cy <= nList.bottom) openCard('card-list');
+                    
+                    // Check Hit - Cards
+                    else {
+                        for(const id in elState) {
+                            if(!elState[id].visible) continue;
+                            const el = document.getElementById(id);
+                            // Simple distance check from center of card for hit detection (easier for rotated rects)
+                            const distToCard = Math.sqrt(Math.pow(cx - elState[id].x, 2) + Math.pow(cy - elState[id].y, 2));
+                            // Approx radius hit (150px)
+                            if(distToCard < 150) {
+                                isGrabbing = true;
+                                grabbedId = id;
+                                document.getElementById(id).classList.add('grabbed');
+                                
+                                // Save initial states
+                                offset.x = cx - elState[id].x;
+                                offset.y = cy - elState[id].y;
+                                startHandAngle = currentHandAngle;
+                                startElAngle = elState[id].rot;
+                                break; // Only grab one
+                            }
+                        }
+                    }
+                } else {
+                    // DRAGGING & ROTATING
+                    if(grabbedId) {
+                        // Position update
+                        elState[grabbedId].x = cx - offset.x;
+                        elState[grabbedId].y = cy - offset.y;
+                        
+                        // Rotation update
+                        const angleDiff = currentHandAngle - startHandAngle;
+                        elState[grabbedId].rot = startElAngle + angleDiff;
+                        
+                        updateElementTransform(grabbedId);
+                    }
+                }
+            } else {
+                // RELEASE
+                if(isGrabbing) {
+                    isGrabbing = false;
+                    if(grabbedId) document.getElementById(grabbedId).classList.remove('grabbed');
+                    grabbedId = null;
+                }
+            }
+        }
+        canvasCtx.restore();
+    }
+
+    const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    hands.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+        onFrame: async () => { await hands.send({image: videoElement}); },
+        width: 640, height: 480, facingMode: 'user'
+    });
+    camera.start();
+</script>
+</body>
+</html>
