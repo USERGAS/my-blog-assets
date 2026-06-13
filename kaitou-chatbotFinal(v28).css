@@ -1007,36 +1007,50 @@ hr { border: 0; border-top: 1px dashed #ccc; margin: 15px 0; }
     color: #00eaff; font-family: monospace; font-size: 16px; font-weight: bold;
     text-shadow: 0 0 10px #00eaff; letter-spacing: 2px;
 }
-/* === EFEK CAHAYA BLASTER (GLOW) === */
+/* === EFEK VISUAL BLASTER (LED & RECOIL) === */
 
-/* Cahaya untuk Area Putih */
+/* Bikin Hitbox jadi bulat dan tanpa border (Biar cahaya natural) */
+#btn-blaster-white, #btn-blaster-black {
+    border-radius: 50%;
+    border: none !important; 
+    transition: all 0.3s ease;
+}
+
+#btn-blaster-trigger {
+    border: none !important;
+}
+
+/* 1. CAHAYA STANDBY PUTIH (Sayap Kiri) */
 .glow-white-active {
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(0, 234, 255, 0) 70%);
-    border-radius: 50% !important; /* Memaksa bentuk cahaya jadi bulat membaur */
-    animation: pulse-glow-white 0.8s infinite alternate;
-    pointer-events: none; /* Biar tetap bisa diklik tembus */
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    box-shadow: 0 0 30px rgba(255,255,255,0.9), inset 0 0 15px rgba(255,255,255,0.8);
+    animation: pulse-white 0.8s infinite alternate;
 }
-@keyframes pulse-glow-white {
-    0% { box-shadow: 0 0 10px rgba(255,255,255,0.5), inset 0 0 20px rgba(255,255,255,0.5); }
-    100% { box-shadow: 0 0 30px #fff, inset 0 0 40px #00eaff; }
+@keyframes pulse-white {
+    0% { opacity: 0.5; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1.1); }
 }
 
-/* Cahaya untuk Area Hitam (Mata Merah) */
+/* 2. CAHAYA STANDBY HITAM/MERAH (Mata Kanan) */
 .glow-black-active {
-    background: radial-gradient(circle, rgba(255, 0, 0, 0.6) 0%, rgba(255, 0, 0, 0) 70%);
-    border-radius: 50% !important;
-    animation: pulse-glow-red 0.6s infinite alternate; /* Denyut lebih cepat */
-    pointer-events: none;
+    /* Warnanya merah menyala sesuai warna mata di gambar */
+    background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, rgba(255,0,0,0) 70%);
+    box-shadow: 0 0 30px rgba(255,0,0,0.9), inset 0 0 15px rgba(255,0,0,0.8);
+    animation: pulse-red 0.6s infinite alternate; /* Berkedip lebih cepat biar sangar */
 }
-@keyframes pulse-glow-red {
-    0% { box-shadow: 0 0 10px rgba(255,0,0,0.5), inset 0 0 20px rgba(255,0,0,0.5); }
-    100% { box-shadow: 0 0 35px #ff0000, inset 0 0 50px #ff0000; }
+@keyframes pulse-red {
+    0% { opacity: 0.5; transform: scale(0.9); box-shadow: 0 0 20px rgba(255,0,0,0.6); }
+    100% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 40px rgba(255,0,0,1); }
 }
 
-/* Efek Kilat saat Pelatuk ditarik */
-.trigger-pulled {
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 0 20px #fff;
-    transition: all 0.1s;
+/* 3. EFEK SENTAKAN (RECOIL) SAAT DITEMBAK */
+.recoil-effect {
+    animation: gunRecoil 0.3s ease-out;
+}
+@keyframes gunRecoil {
+    0% { transform: translateX(0) rotate(0deg); }
+    20% { transform: translateX(-15px) translateY(-5px) rotate(-5deg); /* Mundur & ke angkat dikit */ }
+    50% { transform: translateX(5px) rotate(2deg); }
+    100% { transform: translateX(0) rotate(0deg); }
 }
 </style>
