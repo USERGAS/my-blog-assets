@@ -1,0 +1,29 @@
+[
+  {
+    "id": "kaitou",
+    "name": "Kaitou-kun",
+    "icon": "🎩",
+    "modelSrc": "https://cdn.jsdelivr.net/gh/USERGAS/my-blog-assets/qe6apf.glb",
+    "price": 0,
+    "cameraTarget": "0m 0.5m 0m",
+    "isNew": false
+  },
+  {
+    "id": "eins",
+    "name": "Eins",
+    "icon": "💙",
+    "modelSrc": "https://cdn.jsdelivr.net/gh/USERGAS/my-blog-assets/einsanim-v2.glb",
+    "price": 100,
+    "cameraTarget": "0m 0.5m 0m",
+    "isNew": true
+  },
+  {
+    "id": "master_form",
+    "name": "Kaitou-kun Master Form",
+    "icon": "🌟",
+    "modelSrc": "https://cdn.jsdelivr.net/gh/USERGAS/my-blog-assets/MasterFormHDv3.glb",
+    "price": 1000,
+    "cameraTarget": "0m 0.9m 0m",
+    "isNew": true
+  }
+]
